@@ -57,9 +57,8 @@ function updateSummary() {
 }
 function renderResults() {
   const query = els.search.value.trim().toLocaleLowerCase("th");
-  if (!query) { els.hint.textContent = "เริ่มพิมพ์เพื่อค้นหารายชื่อ"; els.results.innerHTML = '<div class="empty-state">กรอกรหัสพนักงาน หรือ ชื่อ ในช่องด้านบน</div>'; return; }
-  const matches = employees.filter(e => e.id.includes(query) || e.name.toLocaleLowerCase("th").includes(query));
-  els.hint.textContent = matches.length ? `พบ ${matches.length} รายการ` : "ไม่พบรายชื่อที่ค้นหา";
+  const matches = query ? employees.filter(e => e.id.includes(query) || e.name.toLocaleLowerCase("th").includes(query)) : employees;
+  els.hint.textContent = query ? (matches.length ? `พบ ${matches.length} รายการ` : "ไม่พบรายชื่อที่ค้นหา") : `รายชื่อทั้งหมด ${matches.length} รายการ`;
   els.results.innerHTML = matches.length ? matches.map(employeeCard).join("") : '<div class="empty-state">ไม่พบข้อมูล กรุณาตรวจสอบรหัสหรือชื่ออีกครั้ง</div>';
 }
 function employeeCard(e) {
