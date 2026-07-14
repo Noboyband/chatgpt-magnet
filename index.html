@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#071454">
+  <meta name="description" content="ระบบบันทึกการรับ Magnet สำหรับ Roddonjai Day 2026">
+  <title>Magnet Registration | Roddonjai Day 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Noto+Sans+Thai:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark"><span>RODDONJAI</span><b>CERTIFIED</b></div>
+        <div><p>STAFF SERVICE</p><h1>MAGNET REGISTRATION</h1></div>
+      </div>
+      <div class="header-status">
+        <div id="connectionStatus" class="connection-status connecting"><i></i><span>กำลังเชื่อมต่อ</span></div>
+        <div class="live-pill"><span></span> EVENT 2026</div>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <p class="eyebrow">RODDONJAI DAY 2026</p>
+          <h2>ค้นหาและบันทึก<br><strong>ผู้ได้รับ Magnet</strong></h2>
+          <p class="supporting">ค้นหาด้วยรหัสพนักงานหรือชื่อ แล้วกดยืนยันการรับได้ทันที</p>
+        </div>
+        <div class="summary" aria-label="สรุปการแจก Magnet">
+          <article><span>ทั้งหมด</span><strong id="totalCount">0</strong><small>คน</small></article>
+          <article class="received"><span>รับแล้ว</span><strong id="receivedCount">0</strong><small>คน</small></article>
+          <article><span>คงเหลือ</span><strong id="remainingCount">0</strong><small>คน</small></article>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <div class="search-panel">
+          <label for="searchInput">ค้นหาพนักงาน</label>
+          <div class="search-box">
+            <span aria-hidden="true">⌕</span>
+            <input id="searchInput" type="search" inputmode="search" autocomplete="off" placeholder="กรอกรหัสพนักงาน หรือ ชื่อ">
+            <button id="clearSearch" class="clear-button" type="button" aria-label="ล้างคำค้นหา">×</button>
+          </div>
+          <p class="search-hint" id="searchHint">เริ่มพิมพ์เพื่อค้นหารายชื่อ</p>
+          <div id="resultList" class="result-list" aria-live="polite"></div>
+        </div>
+
+        <aside class="activity-panel">
+          <div class="section-heading">
+            <div><p>RECENT ACTIVITY</p><h3>รายการรับล่าสุด</h3></div>
+            <button id="exportButton" class="secondary-button" type="button">ส่งออก CSV</button>
+          </div>
+          <div id="recentList" class="recent-list"></div>
+        </aside>
+      </section>
+    </main>
+  </div>
+
+  <div id="modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close" type="button" data-close-modal aria-label="ปิด">×</button>
+      <p class="eyebrow">ยืนยันการรับ Magnet</p>
+      <h3 id="modalTitle"></h3>
+      <p id="modalId" class="employee-id"></p>
+      <fieldset>
+        <legend>ผู้รับ Magnet</legend>
+        <label class="choice"><input type="radio" name="receiverType" value="self" checked><span><b>รับด้วยตนเอง</b><small>พนักงานมารับด้วยตนเอง</small></span></label>
+        <label class="choice"><input type="radio" name="receiverType" value="proxy"><span><b>มีผู้รับแทน</b><small>ระบุชื่อผู้ที่มารับแทน</small></span></label>
+      </fieldset>
+      <label id="proxyField" class="proxy-field" hidden>ชื่อผู้รับแทน <span>*</span><input id="proxyName" type="text" autocomplete="off" placeholder="กรอกชื่อผู้รับแทน"></label>
+      <p id="formError" class="form-error" role="alert"></p>
+      <div class="modal-actions">
+        <button class="secondary-button" type="button" data-close-modal>ยกเลิก</button>
+        <button id="confirmButton" class="primary-button" type="button">ยืนยันการรับ Magnet</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
