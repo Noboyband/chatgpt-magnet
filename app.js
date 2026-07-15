@@ -4,18 +4,10 @@ import { collection, doc, getDocs, getFirestore, onSnapshot, runTransaction, ser
 import { firebaseConfig } from "./firebase-config.js";
 
 const COLLECTION = "magnetRecipients2026";
-const seedEmployees = [
-  { id: "56445", name: "ปรัชญา", status: "รับแล้ว", proxy: "", receivedAt: new Date("2026-07-20T16:00:00+07:00") },
-  { id: "53090", name: "ภัทระ", status: "รับแล้ว", proxy: "วิวัฒน์", receivedAt: new Date("2026-07-20T16:05:00+07:00") },
-  { id: "84961", name: "นงนุช", status: "ยังไม่ได้รับ", proxy: "", receivedAt: null },
-  { id: "61214", name: "สุธี", status: "ยังไม่ได้รับ", proxy: "", receivedAt: null },
-  { id: "62600", name: "วรรณธิชา", status: "ยังไม่ได้รับ", proxy: "", receivedAt: null },
-  { id: "82712", name: "สุวิสา", status: "ยังไม่ได้รับ", proxy: "", receivedAt: null }
-];
 
 const $ = selector => document.querySelector(selector);
 const els = { search: $("#searchInput"), results: $("#resultList"), hint: $("#searchHint"), recent: $("#recentList"), modal: $("#modal"), modalTitle: $("#modalTitle"), modalId: $("#modalId"), proxyField: $("#proxyField"), proxyName: $("#proxyName"), formError: $("#formError"), confirm: $("#confirmButton"), toast: $("#toast"), connection: $("#connectionStatus"), restoreModal: $("#restoreModal"), restoreEmail: $("#restoreEmail"), restorePassword: $("#restorePassword"), restoreError: $("#restoreError"), confirmRestore: $("#confirmRestoreButton") };
-let employees = [...seedEmployees];
+let employees = [];
 let selectedId = null;
 let db = null;
 let auth = null;
@@ -33,22 +25,12 @@ async function connectFirebase() {
     db = getFirestore(app);
     auth = getAuth(app);
     await signInAnonymously(auth);
-    await seedFirestoreIfEmpty();
     onSnapshot(collection(db, COLLECTION), snapshot => {
       employees = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
       employees.sort((a, b) => a.id.localeCompare(b.id, "th", { numeric: true }));
       setConnection("online", "เชื่อมต่อแล้ว"); renderAll();
     }, handleFirebaseError);
   } catch (error) { handleFirebaseError(error); }
-}
-async function seedFirestoreIfEmpty() {
-  const snapshot = await getDocs(collection(db, COLLECTION));
-  const existingIds = new Set(snapshot.docs.map(item => item.id));
-  const missingEmployees = seedEmployees.filter(employee => !existingIds.has(employee.id));
-  if (!missingEmployees.length) return;
-  const batch = writeBatch(db);
-  missingEmployees.forEach(employee => { const { id, ...data } = employee; batch.set(doc(db, COLLECTION, id), data); });
-  await batch.commit();
 }
 function handleFirebaseError(error) {
   console.error(error); setConnection("offline", "เชื่อมต่อไม่ได้");
@@ -61,14 +43,15 @@ function updateSummary() {
 }
 function renderResults() {
   const query = els.search.value.trim().toLocaleLowerCase("th");
-  const matches = query ? employees.filter(e => e.id.includes(query) || e.name.toLocaleLowerCase("th").includes(query)) : employees;
+  const matches = query ? employees.filter(e => [e.id, e.name, e.nameEn, e.rsn, e.hub, e.status, e.proxy].some(value => String(value || "").toLocaleLowerCase("th").includes(query))) : employees;
   els.hint.textContent = query ? (matches.length ? `พบ ${matches.length} รายการ` : "ไม่พบรายชื่อที่ค้นหา") : `รายชื่อทั้งหมด ${matches.length} รายการ`;
   els.results.innerHTML = matches.length ? matches.map(employeeCard).join("") : '<div class="empty-state">ไม่พบข้อมูล กรุณาตรวจสอบรหัสหรือชื่ออีกครั้ง</div>';
 }
 function employeeCard(e) {
   const done = e.status === "รับแล้ว";
   const detail = done ? `${formatDate(e.receivedAt)}${e.proxy ? ` · รับแทนโดย ${escapeHtml(e.proxy)}` : ""}` : "พร้อมบันทึกการรับ";
-  return `<article class="employee-card"><div class="employee-info"><div class="avatar">${escapeHtml(e.name.slice(0,1))}</div><div><h4>${escapeHtml(e.name)} <span class="status-badge ${done ? "done" : ""}">${escapeHtml(e.status)}</span></h4><p>EMP ID: ${escapeHtml(e.id)}</p><small>${detail}</small></div></div><button class="primary-button" data-receive="${escapeHtml(e.id)}" ${done || !db ? "disabled" : ""}>${done ? "รับแล้ว" : "บันทึกการรับ"}</button></article>`;
+  const organization = [e.rsn, e.hub].filter(Boolean).map(escapeHtml).join(" · ");
+  return `<article class="employee-card"><div class="employee-info"><div class="avatar">${escapeHtml(e.name.slice(0,1))}</div><div><h4>${escapeHtml(e.name)} <span class="english-name">${escapeHtml(e.nameEn || "")}</span> <span class="status-badge ${done ? "done" : ""}">${escapeHtml(e.status)}</span></h4><p>EMP ID: ${escapeHtml(e.id)}${organization ? ` · ${organization}` : ""}</p><small>${detail}</small></div></div><button class="primary-button" data-receive="${escapeHtml(e.id)}" ${done || !db ? "disabled" : ""}>${done ? "รับแล้ว" : "บันทึกการรับ"}</button></article>`;
 }
 function renderRecent() {
   const recent = employees.filter(e => e.receivedAt).sort((a,b) => toDate(b.receivedAt)-toDate(a.receivedAt)).slice(0,6);
@@ -125,7 +108,7 @@ async function confirmReceipt() {
 }
 function showToast(message) { els.toast.textContent = message; els.toast.classList.add("show"); setTimeout(() => els.toast.classList.remove("show"), 3200); }
 function exportCsv() {
-  const rows = [["EMP ID","Firstname","status","ชื่อคนรับแทน","วันเวลาที่ได้รับ"], ...employees.map(e => [e.id,e.name,e.status,e.proxy || "",formatDate(e.receivedAt)])];
+  const rows = [["Employee ID","First Name THA","First Name ENG","RSN","Hub","status","ชื่อคนรับแทน","วันเวลาที่ได้รับ"], ...employees.map(e => [e.id,e.name,e.nameEn || "",e.rsn || "",e.hub || "",e.status,e.proxy || "",formatDate(e.receivedAt)])];
   const csv = "\ufeff" + rows.map(row => row.map(v => `"${String(v).replaceAll('"','""')}"`).join(",")).join("\r\n");
   const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8"})); link.download = `magnet-registration-${new Date().toISOString().slice(0,10)}.csv`; link.click(); URL.revokeObjectURL(link.href);
 }

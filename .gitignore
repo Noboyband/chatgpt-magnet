@@ -2,3 +2,7 @@
 .git.onedrive-broken/
 .DS_Store
 Thumbs.db
+# Local-only employee master data and import utility (contains personal data)
+employee-data.js
+admin-import.html
+admin-import.js
