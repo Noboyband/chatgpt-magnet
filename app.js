@@ -8,7 +8,9 @@ const seedEmployees = [
   { id: "56445", name: "ปรัชญา", status: "รับแล้ว", proxy: "", receivedAt: new Date("2026-07-20T16:00:00+07:00") },
   { id: "53090", name: "ภัทระ", status: "รับแล้ว", proxy: "วิวัฒน์", receivedAt: new Date("2026-07-20T16:05:00+07:00") },
   { id: "84961", name: "นงนุช", status: "ยังไม่ได้รับ", proxy: "", receivedAt: null },
-  { id: "61214", name: "สุธี", status: "ยังไม่ได้รับ", proxy: "", receivedAt: null }
+  { id: "61214", name: "สุธี", status: "ยังไม่ได้รับ", proxy: "", receivedAt: null },
+  { id: "62600", name: "วรรณธิชา", status: "ยังไม่ได้รับ", proxy: "", receivedAt: null },
+  { id: "82712", name: "สุวิสา", status: "ยังไม่ได้รับ", proxy: "", receivedAt: null }
 ];
 
 const $ = selector => document.querySelector(selector);
