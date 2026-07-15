@@ -1,16 +1,17 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-import { getAuth, signInAnonymously, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-import { collection, doc, getDocs, getFirestore, onSnapshot, runTransaction, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+import { browserSessionPersistence, getAuth, setPersistence, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+import { collection, doc, getDoc, getDocs, getFirestore, onSnapshot, runTransaction, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const COLLECTION = "magnetRecipients2026";
 
 const $ = selector => document.querySelector(selector);
-const els = { search: $("#searchInput"), results: $("#resultList"), hint: $("#searchHint"), recent: $("#recentList"), modal: $("#modal"), modalTitle: $("#modalTitle"), modalId: $("#modalId"), proxyField: $("#proxyField"), proxyName: $("#proxyName"), formError: $("#formError"), confirm: $("#confirmButton"), toast: $("#toast"), connection: $("#connectionStatus"), restoreModal: $("#restoreModal"), restoreEmail: $("#restoreEmail"), restorePassword: $("#restorePassword"), restoreError: $("#restoreError"), confirmRestore: $("#confirmRestoreButton") };
+const els = { search: $("#searchInput"), results: $("#resultList"), hint: $("#searchHint"), recent: $("#recentList"), modal: $("#modal"), modalTitle: $("#modalTitle"), modalId: $("#modalId"), proxyField: $("#proxyField"), proxyName: $("#proxyName"), formError: $("#formError"), confirm: $("#confirmButton"), toast: $("#toast"), connection: $("#connectionStatus"), loginModal: $("#loginModal"), staffEmail: $("#staffEmail"), staffPassword: $("#staffPassword"), loginError: $("#loginError"), loginButton: $("#loginButton"), restoreModal: $("#restoreModal"), restoreEmail: $("#restoreEmail"), restorePassword: $("#restorePassword"), restoreError: $("#restoreError"), confirmRestore: $("#confirmRestoreButton") };
 let employees = [];
 let selectedId = null;
 let db = null;
 let auth = null;
+let unsubscribeEmployees = null;
 
 function isConfigured() { return firebaseConfig && ["apiKey", "authDomain", "projectId", "appId"].every(key => firebaseConfig[key] && !String(firebaseConfig[key]).includes("YOUR_")); }
 function setConnection(state, label) { els.connection.className = `connection-status ${state}`; els.connection.querySelector("span").textContent = label; }
@@ -24,13 +25,29 @@ async function connectFirebase() {
     const app = initializeApp(firebaseConfig);
     db = getFirestore(app);
     auth = getAuth(app);
-    await signInAnonymously(auth);
-    onSnapshot(collection(db, COLLECTION), snapshot => {
+    await setPersistence(auth, browserSessionPersistence);
+    setConnection("offline", "รอ Staff Login");
+  } catch (error) { handleFirebaseError(error); }
+}
+async function loginStaff() {
+  const email = els.staffEmail.value.trim();
+  const password = els.staffPassword.value;
+  if (!email || !password) { els.loginError.textContent = "กรุณากรอกอีเมลและรหัสผ่าน"; return; }
+  els.loginButton.disabled = true; els.loginButton.textContent = "กำลังตรวจสอบ..."; els.loginError.textContent = "";
+  try {
+    const credential = await signInWithEmailAndPassword(auth, email, password);
+    const [staff, admin] = await Promise.all([getDoc(doc(db, "staff", credential.user.uid)), getDoc(doc(db, "admins", credential.user.uid))]);
+    if (!staff.exists() && !admin.exists()) throw new Error("บัญชีนี้ไม่มีสิทธิ์ Staff");
+    els.loginModal.hidden = true; document.body.style.overflow = "";
+    if (unsubscribeEmployees) unsubscribeEmployees();
+    unsubscribeEmployees = onSnapshot(collection(db, COLLECTION), snapshot => {
       employees = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
       employees.sort((a, b) => a.id.localeCompare(b.id, "th", { numeric: true }));
       setConnection("online", "เชื่อมต่อแล้ว"); renderAll();
     }, handleFirebaseError);
-  } catch (error) { handleFirebaseError(error); }
+  } catch (error) {
+    console.error(error); els.loginError.textContent = String(error?.code || "").startsWith("auth/") ? "อีเมลหรือรหัสผ่านไม่ถูกต้อง" : (error.message || "บัญชีนี้ไม่มีสิทธิ์ Staff");
+  } finally { els.loginButton.disabled = false; els.loginButton.textContent = "เข้าสู่ระบบ"; }
 }
 function handleFirebaseError(error) {
   console.error(error); setConnection("offline", "เชื่อมต่อไม่ได้");
@@ -107,11 +124,6 @@ async function confirmReceipt() {
   finally { els.confirm.disabled = false; els.confirm.textContent = "ยืนยันการรับ Magnet"; }
 }
 function showToast(message) { els.toast.textContent = message; els.toast.classList.add("show"); setTimeout(() => els.toast.classList.remove("show"), 3200); }
-function exportCsv() {
-  const rows = [["Employee ID","First Name THA","First Name ENG","RSN","Hub","status","ชื่อคนรับแทน","วันเวลาที่ได้รับ"], ...employees.map(e => [e.id,e.name,e.nameEn || "",e.rsn || "",e.hub || "",e.status,e.proxy || "",formatDate(e.receivedAt)])];
-  const csv = "\ufeff" + rows.map(row => row.map(v => `"${String(v).replaceAll('"','""')}"`).join(",")).join("\r\n");
-  const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8"})); link.download = `magnet-registration-${new Date().toISOString().slice(0,10)}.csv`; link.click(); URL.revokeObjectURL(link.href);
-}
 function renderAll() { updateSummary(); renderResults(); renderRecent(); }
 
 els.search.addEventListener("input", renderResults);
@@ -119,7 +131,9 @@ $("#clearSearch").addEventListener("click", () => { els.search.value = ""; rende
 els.results.addEventListener("click", event => { const button = event.target.closest("[data-receive]"); if (button) openModal(button.dataset.receive); });
 document.querySelectorAll("[data-close-modal]").forEach(element => element.addEventListener("click", closeModal));
 document.querySelectorAll('input[name="receiverType"]').forEach(radio => radio.addEventListener("change", event => { els.proxyField.hidden = event.target.value !== "proxy"; els.formError.textContent = ""; if (!els.proxyField.hidden) els.proxyName.focus(); }));
-els.confirm.addEventListener("click", confirmReceipt); $("#exportButton").addEventListener("click", exportCsv);
+els.confirm.addEventListener("click", confirmReceipt);
+els.loginButton.addEventListener("click", loginStaff);
+els.staffPassword.addEventListener("keydown", event => { if (event.key === "Enter") loginStaff(); });
 $("#restoreButton").addEventListener("click", openRestoreModal);
 document.querySelectorAll("[data-close-restore]").forEach(element => element.addEventListener("click", closeRestoreModal));
 els.confirmRestore.addEventListener("click", restoreAllEmployees);

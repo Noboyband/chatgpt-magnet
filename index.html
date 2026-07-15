@@ -69,10 +69,7 @@
         <aside class="activity-panel">
           <div class="section-heading">
             <div><p>RECENT ACTIVITY</p><h3>รายการรับล่าสุด</h3></div>
-            <div class="section-actions">
-              <button id="exportButton" class="secondary-button" type="button">ส่งออก CSV</button>
-              <button id="restoreButton" class="danger-button" type="button">Restore รายชื่อทั้งหมด</button>
-            </div>
+            <div class="section-actions"><button id="restoreButton" class="danger-button" type="button">Restore รายชื่อทั้งหมด</button></div>
           </div>
           <div id="recentList" class="recent-list"></div>
         </aside>
@@ -98,6 +95,19 @@
         <button class="secondary-button" type="button" data-close-modal>ยกเลิก</button>
         <button id="confirmButton" class="primary-button" type="button">ยืนยันการรับ Magnet</button>
       </div>
+    </section>
+  </div>
+
+  <div id="loginModal" class="modal login-modal">
+    <div class="modal-backdrop"></div>
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+      <p class="eyebrow">STAFF ACCESS</p>
+      <h3 id="loginTitle">เข้าสู่ระบบเจ้าหน้าที่</h3>
+      <p class="employee-id">ใช้บัญชี Staff ที่ลงทะเบียนใน Firebase Authentication</p>
+      <label class="proxy-field">อีเมล <span>*</span><input id="staffEmail" type="email" autocomplete="username" placeholder="staff@example.com"></label>
+      <label class="proxy-field">รหัสผ่าน <span>*</span><input id="staffPassword" type="password" autocomplete="current-password" placeholder="กรอกรหัสผ่าน"></label>
+      <p id="loginError" class="form-error" role="alert"></p>
+      <button id="loginButton" class="primary-button login-button" type="button">เข้าสู่ระบบ</button>
     </section>
   </div>
 

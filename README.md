@@ -24,7 +24,17 @@ firebase deploy --only firestore:rules,hosting
 
 ## ความปลอดภัย
 
-Firebase Web Config ไม่ใช่รหัสผ่าน สิทธิ์อ่านและเขียนถูกควบคุมด้วย `firestore.rules` กฎที่ให้มาบังคับให้ลงชื่อเข้าใช้แบบ Anonymous, ห้ามลบรายชื่อ และอนุญาตให้เปลี่ยนสถานะจาก “ยังไม่ได้รับ” เป็น “รับแล้ว” ได้ครั้งเดียว
+Firebase Web Config ไม่ใช่รหัสผ่าน สิทธิ์อ่านและเขียนถูกควบคุมด้วย `firestore.rules` ระบบบังคับให้ Login ด้วย Email/Password และตรวจ UID ใน `staff` หรือ `admins` ก่อนเข้าถึงรายชื่อ
+
+### ตั้งค่าบัญชี Staff
+
+1. เปิด **Email/Password** ใน Firebase Authentication
+2. สร้างบัญชี Staff ใน Authentication > Users
+3. คัดลอก UID และสร้าง Document `staff/{UID}` ใน Firestore
+4. เพิ่ม Field `role` เป็น String ค่า `staff`
+5. Publish `firestore.rules` ล่าสุด
+
+เฉพาะบัญชีที่มี Document ใน `staff` หรือ `admins` เท่านั้นที่อ่านรายชื่อและบันทึกการรับได้
 
 ### ตั้งค่าผู้ดูแลสำหรับ Restore
 
