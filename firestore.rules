@@ -2,6 +2,16 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    match /admins/{adminId} {
+      allow read: if request.auth != null && request.auth.uid == adminId;
+      allow write: if false;
+    }
+
     match /magnetRecipients2026/{employeeId} {
       allow read: if request.auth != null;
 
@@ -13,10 +23,17 @@ service cloud.firestore {
 
       allow update: if request.auth != null
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'proxy', 'receivedAt'])
-        && resource.data.status == 'ยังไม่ได้รับ'
-        && request.resource.data.status == 'รับแล้ว'
-        && request.resource.data.proxy is string
-        && request.resource.data.receivedAt == request.time;
+        && (
+          (resource.data.status == 'ยังไม่ได้รับ'
+            && request.resource.data.status == 'รับแล้ว'
+            && request.resource.data.proxy is string
+            && request.resource.data.receivedAt == request.time)
+          ||
+          (isAdmin()
+            && request.resource.data.status == 'ยังไม่ได้รับ'
+            && request.resource.data.proxy == ''
+            && request.resource.data.receivedAt == null)
+        );
 
       allow delete: if false;
     }

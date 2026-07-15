@@ -25,3 +25,14 @@ firebase deploy --only firestore:rules,hosting
 ## ความปลอดภัย
 
 Firebase Web Config ไม่ใช่รหัสผ่าน สิทธิ์อ่านและเขียนถูกควบคุมด้วย `firestore.rules` กฎที่ให้มาบังคับให้ลงชื่อเข้าใช้แบบ Anonymous, ห้ามลบรายชื่อ และอนุญาตให้เปลี่ยนสถานะจาก “ยังไม่ได้รับ” เป็น “รับแล้ว” ได้ครั้งเดียว
+
+### ตั้งค่าผู้ดูแลสำหรับ Restore
+
+1. ไปที่ **Firebase Authentication > Sign-in method** แล้วเปิด **Email/Password**
+2. ไปที่ **Authentication > Users** แล้วสร้างบัญชีผู้ดูแล
+3. คัดลอก `User UID` ของบัญชีนั้น
+4. ไปที่ **Firestore Database** สร้าง Collection ชื่อ `admins`
+5. สร้าง Document โดยใช้ `User UID` เป็น Document ID และเพิ่ม Field `role` เป็น String ค่า `admin`
+6. Publish กฎล่าสุดจาก `firestore.rules`
+
+หน้าเว็บจะอนุญาตให้ Restore เฉพาะบัญชี Email/Password ที่มีเอกสาร `admins/{UID}` เท่านั้น รหัสผ่านผู้ดูแลไม่ถูกเก็บในโค้ด

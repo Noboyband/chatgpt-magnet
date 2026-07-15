@@ -69,7 +69,10 @@
         <aside class="activity-panel">
           <div class="section-heading">
             <div><p>RECENT ACTIVITY</p><h3>รายการรับล่าสุด</h3></div>
-            <button id="exportButton" class="secondary-button" type="button">ส่งออก CSV</button>
+            <div class="section-actions">
+              <button id="exportButton" class="secondary-button" type="button">ส่งออก CSV</button>
+              <button id="restoreButton" class="danger-button" type="button">Restore รายชื่อทั้งหมด</button>
+            </div>
           </div>
           <div id="recentList" class="recent-list"></div>
         </aside>
@@ -94,6 +97,23 @@
       <div class="modal-actions">
         <button class="secondary-button" type="button" data-close-modal>ยกเลิก</button>
         <button id="confirmButton" class="primary-button" type="button">ยืนยันการรับ Magnet</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="restoreModal" class="modal" hidden>
+    <div class="modal-backdrop" data-close-restore></div>
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="restoreTitle">
+      <button class="modal-close" type="button" data-close-restore aria-label="ปิด">×</button>
+      <p class="eyebrow">ADMINISTRATOR ACTION</p>
+      <h3 id="restoreTitle">Restore รายชื่อทั้งหมด</h3>
+      <p class="restore-warning">ระบบจะเปลี่ยนทุกรายชื่อเป็น “ยังไม่ได้รับ” และล้างวันเวลา รวมถึงชื่อผู้รับแทนทั้งหมด</p>
+      <label class="proxy-field">อีเมลผู้ดูแล <span>*</span><input id="restoreEmail" type="email" autocomplete="username" placeholder="admin@example.com"></label>
+      <label class="proxy-field">รหัสผ่าน <span>*</span><input id="restorePassword" type="password" autocomplete="current-password" placeholder="กรอกรหัสผ่านผู้ดูแล"></label>
+      <p id="restoreError" class="form-error" role="alert"></p>
+      <div class="modal-actions">
+        <button class="secondary-button" type="button" data-close-restore>ยกเลิก</button>
+        <button id="confirmRestoreButton" class="danger-button" type="button">ยืนยัน Restore</button>
       </div>
     </section>
   </div>

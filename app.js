@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+import { getAuth, signInAnonymously, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import { collection, doc, getDocs, getFirestore, onSnapshot, runTransaction, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
@@ -14,10 +14,11 @@ const seedEmployees = [
 ];
 
 const $ = selector => document.querySelector(selector);
-const els = { search: $("#searchInput"), results: $("#resultList"), hint: $("#searchHint"), recent: $("#recentList"), modal: $("#modal"), modalTitle: $("#modalTitle"), modalId: $("#modalId"), proxyField: $("#proxyField"), proxyName: $("#proxyName"), formError: $("#formError"), confirm: $("#confirmButton"), toast: $("#toast"), connection: $("#connectionStatus") };
+const els = { search: $("#searchInput"), results: $("#resultList"), hint: $("#searchHint"), recent: $("#recentList"), modal: $("#modal"), modalTitle: $("#modalTitle"), modalId: $("#modalId"), proxyField: $("#proxyField"), proxyName: $("#proxyName"), formError: $("#formError"), confirm: $("#confirmButton"), toast: $("#toast"), connection: $("#connectionStatus"), restoreModal: $("#restoreModal"), restoreEmail: $("#restoreEmail"), restorePassword: $("#restorePassword"), restoreError: $("#restoreError"), confirmRestore: $("#confirmRestoreButton") };
 let employees = [...seedEmployees];
 let selectedId = null;
 let db = null;
+let auth = null;
 
 function isConfigured() { return firebaseConfig && ["apiKey", "authDomain", "projectId", "appId"].every(key => firebaseConfig[key] && !String(firebaseConfig[key]).includes("YOUR_")); }
 function setConnection(state, label) { els.connection.className = `connection-status ${state}`; els.connection.querySelector("span").textContent = label; }
@@ -30,7 +31,8 @@ async function connectFirebase() {
   try {
     const app = initializeApp(firebaseConfig);
     db = getFirestore(app);
-    await signInAnonymously(getAuth(app));
+    auth = getAuth(app);
+    await signInAnonymously(auth);
     await seedFirestoreIfEmpty();
     onSnapshot(collection(db, COLLECTION), snapshot => {
       employees = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
@@ -80,6 +82,29 @@ function openModal(id) {
   els.proxyField.hidden = true; els.proxyName.value = ""; els.formError.textContent = ""; els.modal.hidden = false; document.body.style.overflow = "hidden"; els.confirm.focus();
 }
 function closeModal() { els.modal.hidden = true; document.body.style.overflow = ""; selectedId = null; }
+function openRestoreModal() {
+  if (!db) { showToast("Firebase ยังไม่พร้อมใช้งาน"); return; }
+  els.restoreEmail.value = ""; els.restorePassword.value = ""; els.restoreError.textContent = ""; els.restoreModal.hidden = false; document.body.style.overflow = "hidden"; els.restoreEmail.focus();
+}
+function closeRestoreModal() { els.restoreModal.hidden = true; document.body.style.overflow = ""; }
+async function restoreAllEmployees() {
+  const email = els.restoreEmail.value.trim();
+  const password = els.restorePassword.value;
+  if (!email || !password) { els.restoreError.textContent = "กรุณากรอกอีเมลและรหัสผ่านผู้ดูแล"; return; }
+  els.confirmRestore.disabled = true; els.confirmRestore.textContent = "กำลัง Restore...";
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    const snapshot = await getDocs(collection(db, COLLECTION));
+    const batch = writeBatch(db);
+    snapshot.docs.forEach(item => batch.update(item.ref, { status: "ยังไม่ได้รับ", receivedAt: null, proxy: "" }));
+    await batch.commit(); closeRestoreModal(); showToast(`Restore รายชื่อทั้งหมด ${snapshot.size} รายการเรียบร้อยแล้ว`);
+  } catch (error) {
+    console.error(error);
+    const authError = String(error?.code || "").startsWith("auth/");
+    els.restoreError.textContent = authError ? "อีเมลหรือรหัสผ่านผู้ดูแลไม่ถูกต้อง" : "บัญชีนี้ไม่มีสิทธิ์ Restore หรือ Firestore Rules ยังไม่ได้อัปเดต";
+  }
+  finally { els.confirmRestore.disabled = false; els.confirmRestore.textContent = "ยืนยัน Restore"; }
+}
 async function confirmReceipt() {
   const employee = employees.find(item => item.id === selectedId); if (!employee || !db) return;
   const type = document.querySelector('input[name="receiverType"]:checked').value;
@@ -112,5 +137,9 @@ els.results.addEventListener("click", event => { const button = event.target.clo
 document.querySelectorAll("[data-close-modal]").forEach(element => element.addEventListener("click", closeModal));
 document.querySelectorAll('input[name="receiverType"]').forEach(radio => radio.addEventListener("change", event => { els.proxyField.hidden = event.target.value !== "proxy"; els.formError.textContent = ""; if (!els.proxyField.hidden) els.proxyName.focus(); }));
 els.confirm.addEventListener("click", confirmReceipt); $("#exportButton").addEventListener("click", exportCsv);
-document.addEventListener("keydown", event => { if (event.key === "Escape" && !els.modal.hidden) closeModal(); });
+$("#restoreButton").addEventListener("click", openRestoreModal);
+document.querySelectorAll("[data-close-restore]").forEach(element => element.addEventListener("click", closeRestoreModal));
+els.confirmRestore.addEventListener("click", restoreAllEmployees);
+els.restorePassword.addEventListener("keydown", event => { if (event.key === "Enter") restoreAllEmployees(); });
+document.addEventListener("keydown", event => { if (event.key === "Escape") { if (!els.modal.hidden) closeModal(); if (!els.restoreModal.hidden) closeRestoreModal(); } });
 renderAll(); connectFirebase();
